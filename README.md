@@ -1,0 +1,1 @@
+I have always struggled with math so this is my way of getting better at it - use different approahces/languages to solve for the unknown value in formulas. The goal is to eventually make entering the equations via computer as natural as possible.
