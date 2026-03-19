@@ -30,7 +30,7 @@
     [(#t) ""]
     ))
 
-; Metric prefixes (barring base)
+; Metric prefixes
 (define yocto (expt 10 -24))
 (define zepto (expt 10 -21))
 (define atto  (expt 10 -18))

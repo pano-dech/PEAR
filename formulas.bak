@@ -14,7 +14,7 @@
 ; Week 1 - Electric Force.ppt
 
 (define (f2 \1 \2 \3 \4)
-  (list [mul k [div [abso [mul \1 \2]] [exp \3 2]] \4] ; taken from page 6
+  (list [mul k [div [abs [mul \1 \2]] [exp \3 2]] \4] ; taken from page 6
         (case (add1 (index-of (list \1 \2 \3 \4) "?"))
           [(1) "Coulombs"]
           [(2) "Coulombs"]
