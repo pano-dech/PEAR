@@ -1,6 +1,5 @@
 #lang racket
-(require "math_ops.rkt")
-(require "Constants.rkt")
+(require "mops.rkt")
 
 ; Week 1 - Introduction to Electricity.ppt
 

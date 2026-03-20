@@ -1,0 +1,253 @@
+#lang racket
+(provide (all-defined-out))
+(require racket/math)
+(require racket/string)
+
+; Metric prefixes (barring base)
+(define yocto (expt 10 -24))
+(define zepto (expt 10 -21))
+(define atto  (expt 10 -18))
+(define femto (expt 10 -15))
+(define pico  (expt 10 -12))
+(define nano  (expt 10 -9))
+(define micro (expt 10 -6))
+(define milli (expt 10 -3))
+(define centi (expt 10 -2))
+(define deci  (expt 10 -1))
+(define base  (expt 10 0))
+(define deka  (expt 10 1))
+(define hecto (expt 10 2))
+(define kilo  (expt 10 3))
+(define mega  (expt 10 6))
+(define giga  (expt 10 9))
+(define tera  (expt 10 12))
+(define peta  (expt 10 15))
+(define exa   (expt 10 18))
+(define zetta (expt 10 21))
+(define yotta (expt 10 24))
+
+; SUPPORTED OPERATIONS:
+; - absolute
+; - addition & subtraction
+; - arccos & cosine
+; - arcsine & sine
+; - arctan & tangent
+; - division & multiplication
+; - exponent, logarithm, radical
+
+(define (accept? \1 \2)
+  (<= (abs (- \1 \2)) 0.5))
+
+(define (handle notnum expr)
+  (cond [(not (number? expr)) (error "handle: The second argument is supposed to be a number.")]
+        [(list? notnum) (case (length notnum)
+                          [(2) ((first notnum) (second notnum) expr)]
+                          [(3) ((first notnum) (second notnum) (third notnum) expr)]
+                          [else (error "handle: The list is only supposed to have 2-3 elements.")])]
+        [(string? notnum) expr]
+        [(symbol? notnum) expr]
+        [else (error "handle: The first argument is supposed to be either a string or a list")]))
+
+(define (convert value unit1 unit2)
+  (define (metrics u)
+    (cond [(not (integer? u)) (expt 10 u)] ; floating point exponents
+          [(= 0 u) 1]
+          [(positive-integer? (/ u 10)) u] ; exponents that are already a multiple of 10
+          [(positive-integer? (/ (/ 1 u) 10)) (expt 10 u)] ; exponents that are reciprocals
+          [else (expt 10 u)]))
+  (let ([bad (filter-not number? (list value unit1 unit2))])
+    (if [empty? bad]
+        [/ (* value (metrics unit1)) (metrics unit2)]
+        [error "convert: The following input/s is/are invalid: " (~a bad)])))
+
+(define (ten \1 [\2 1])
+  (* \1 (expt 10 \2)))
+
+(define (test phase func args)
+  (cond [(not (exact-nonnegative-integer? phase))
+         (error "test: The first argument is supposed to be a non-negative integer.")]
+        [(not (procedure? func))
+         (error "test: The second argument is supposed to be a procedure.")]
+        [(not (list? args))
+         (error "test: The third argument should be a list.")]
+        [(= 1 phase)
+         (map (lambda (pos)
+                (list-set args pos "?"))
+              (build-list (length args) values))]
+        [(= 2 phase)
+         (map (lambda (\1)
+           (case (length \1)
+             [(2) (func (first \1) (second \1))]
+             [(3) (func (first \1) (second \1) (third \1))]
+             [(4) (func (first \1) (second \1) (third \1) (fourth \1))]
+             [else (error (string-append* "test->phase2: " ~a (length \1)))]))
+              (test 1 func args))]
+        [(= 3 phase)
+         (map (lambda (\1 \2)
+                (if [list? \2]
+                    [<= (abs (- \1 (first \2))) 0.5]
+                    [<= (abs (- \1 \2)) 0.5]))
+              args (test 2 func args))]
+        [(= 4 phase)
+         (foldl equal? #t (test 3 func args))]
+        [else (error "test: The first argument is out of range.")]))
+
+(define (x-comp \1 \2)
+  (* \1 (cosine \2)))
+
+(define (y-comp \1 \2)
+  (* \1 (sine \2)))
+
+; group: absolute
+
+(define (abso \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (abs \2))]
+    [(list #t #f) (handle \2 (abs \1))]
+    [(list #t #t) (abs \1)]
+    [(list #f #f) (list abso \1)]
+    ))
+
+; group: addition & subtraction
+
+(define (add \1 \2 [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (- \3 \2))]
+    [(list #t #f #t) (handle \2 (- \3 \1))]
+    [(list #t #t #f) (handle \3 (+ \1 \2))]
+    [(list #t #t #t) (+ \1 \2)]
+    [(list #t #f #f) (list add \1 \2)]
+    [(list #f #t #f) (list add \1 \2)]
+    [(list #f #f #t) (list sub \3 \2)]
+    [(list #f #f #f) (error "add: There should two unknowns at most.")]
+    ))
+
+(define (sub \1 \2 [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (+ \3 \2))]
+    [(list #t #f #t) (handle \2 (- \1 \3))]
+    [(list #t #t #f) (handle \3 (- \1 \2))]
+    [(list #t #t #t) (- \1 \2)]
+    [(list #t #f #f) (list sub \1 \2)]
+    [(list #f #t #f) (list sub \1 \2)]
+    [(list #f #f #t) (list add \3 \2)]
+    [(list #f #f #f) (error "sub: There should two unknowns at most.")]
+    ))
+
+; group: arccosine & cosine
+
+(define (arccos \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (sine \2))]
+    [(list #t #f) (handle \2 (radians->degrees (acos \1)))]
+    [(list #t #t) (radians->degrees (acos \1))]
+    [(list #f #f) (list arccos \1)]
+    ))
+
+(define (cosine \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (arccos \2))]
+    [(list #t #f) (handle \2 (cos (degrees->radians \1)))]
+    [(list #t #t) (cosine (degrees->radians \1))]
+    [(list #f #f) (list cosine \1)]
+    ))
+
+; group: arcsine & sine
+
+(define (arcsine \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (sine \2))]
+    [(list #t #f) (handle \2 (radians->degrees (asin \1)))]
+    [(list #t #t) (radians->degrees (asin \1))]
+    [(list #f #f) (list arcsine \1)]
+    ))
+
+(define (sine \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (arcsine \2))]
+    [(list #t #f) (handle \2 (sin (degrees->radians \1)))]
+    [(list #t #t) (sin (degrees->radians \1))]
+    [(list #f #f) (list sine \1)]
+    ))
+
+; group: arctangent & tangent
+
+(define (arctan \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (tangent \2))]
+    [(list #t #f) (handle \2 (radians->degrees (atan \1)))]
+    [(list #t #t) (radians->degrees (atan \1))]
+    [(list #f #f) (list arctan \1)]
+    ))
+
+(define (tangent \1 [\2 "?"])
+  (match (map number? (list \1 \2))
+    [(list #f #t) (handle \1 (arctan \2))]
+    [(list #t #f) (handle \2 (tan (degrees->radians \1)))]
+    [(list #t #t) (tan (degrees->radians \1))]
+    [(list #f #f) (list tangent \1)]
+    ))
+
+; group: division & multiplication
+
+(define (div \1 \2 [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (* \3 \2))]
+    [(list #t #f #t) (handle \2 (/ \1 \3))]
+    [(list #t #t #f) (handle \3 (/ \1 \2))]
+    [(list #t #t #t) (/ \1 \2)]
+    [(list #t #f #f) (list div \1 \2)]
+    [(list #f #t #f) (list div \1 \2)]
+    [(list #f #f #t) (list mul \3 \2)]
+    [(list #f #f #f) (error "div: There should two unknowns at most.")]
+    ))
+
+(define (mul \1 \2 [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (/ \3 \2))]
+    [(list #t #f #t) (handle \2 (/ \3 \1))]
+    [(list #t #t #f) (handle \3 (* \1 \2))]
+    [(list #t #t #t) (* \1 \2)]
+    [(list #t #f #f) (list mul \1 \2)]
+    [(list #f #t #f) (list mul \1 \2)]
+    [(list #f #f #t) (list div \3 \2)]
+    [(list #f #f #f) (error "mul: There should two unknowns at most.")]
+    ))
+
+; group: exponent, logarithm, radical
+
+(define (exp \1 [\2 1] [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (expt \3 (/ 1 \2)))]
+    [(list #t #f #t) (handle \2 (log \3 \1))]
+    [(list #t #t #f) (handle \3 (expt \1 \2))]
+    [(list #t #t #t) (expt \1 \2)]
+    [(list #t #f #f) (list exp \1 \2)]
+    [(list #f #t #f) (list exp \1 \2)]
+    [(list #f #f #t) (list loga \3 \1)]
+    [(list #f #f #f) (error "exp: There is supposed to be at least one known value.")]
+    ))
+
+(define (loga \1 [\2 10] [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (expt \2 \3))]
+    [(list #t #f #t) (handle \2 (expt \1 (/ 1 \3)))]
+    [(list #t #t #f) (handle \3 (log \1 \2))]
+    [(list #t #t #t) (log \1 \2)]
+    [(list #t #f #f) (list loga \1 \2)]
+    [(list #f #t #f) (list loga \1 \2)]
+    [(list #f #f #t) (list exp \2 \3)]
+    [(list #f #f #f) (error "loga: There are is supposed to be at least one known value.")]
+    ))
+
+(define (rad \1 [\2 2] [\3 "?"])
+  (match (map number? (list \1 \2 \3))
+    [(list #f #t #t) (handle \1 (expt \3 \2))]
+    [(list #t #f #t) (handle \2 (log \1 \3))]
+    [(list #t #t #f) (handle \3 (expt \1 (/ 1 \2)))]
+    [(list #t #t #t) (expt \1 (/ 1 \2))]
+    [(list #t #f #f) (list rad \1 \2)]
+    [(list #f #t #f) (list rad \1 \2)]
+    [(list #f #f #t) (list loga \1 \3)]
+    [(list #f #f #f) (error "rad: There are is supposed to be at least one known value.")]
+    ))

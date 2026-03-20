@@ -1,0 +1,15 @@
+#lang racket
+(require "P3-F.rkt")
+(require (file "../mops.rkt"))
+(require (file "../Constants.rkt"))
+
+(test 2 f3.1.2.6 (list 1 2 500 (ten 7.19 4)))
+(test 2 f3.1.2.6 (list (convert 3 -6 0) (convert 5 -6 0) 0.2 3.37))
+(test 2 f3.1.2.6 (list (convert 3 -6 0) (convert 4 -6 0) 0.3 1.20))
+(test 2 f3.1.2.6 (list (convert 4 -6 0) (convert 6 -6 0) 0.15 9.6))
+(test 2 f3.1.2.6 (list (convert 4 -6 0) (convert 5 -6 0) 0.10 18))
+(test 2 rad (list (+ (expt 20.81 2) (expt 9.18 2)) 2 22.74))
+(test 2 arctan (list (/ 9.18 20.81) 23.80))
+(rad (add (exp "?" 2) (exp 9.18 2)) 2 22.74)
+(arctan (div "?" 20.81) 23.80)
+(exp (add (div 1 "?") (div 1 "?")) -1 46)

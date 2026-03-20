@@ -1,0 +1,24 @@
+#lang racket
+(require (file "../mops.rkt"))
+(require (file "../Constants.rkt"))
+
+(define (f3.1.1.9 \1 \2 [\3 e])
+  (list (mul \2 \3 \1)
+        (case (index-of (list \1 \2 \3) "?")
+          [(0) "Coulombs"]
+          [(1) "electrons"]
+          [(2) "Coulombs"]
+          [(#f) (accept? (* \2 \3) \1)]
+          [else (error "f3.1.1.9")]
+        )))
+
+(define (f3.1.2.6 \1 \2 \3 [\4 "?"])
+  (list (mul k (div (abso (mul \1 \2)) (exp \3 2)) \4)
+        (case (index-of (list \1 \2 \3 \4) "?")
+          [(0) "Coulombs"]
+          [(1) "Coulombs"]
+          [(2) "meters"]
+          [(3) "Newtons"]
+          [(#f) (accept? (mul k (div (abso (mul \1 \2)) (exp \3 2))) \4)]
+          [else (error "f3.1.1.9")]
+        )))
